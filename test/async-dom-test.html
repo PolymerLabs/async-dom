@@ -1,0 +1,135 @@
+<!doctype html>
+
+<html>
+  <head>
+    <title>yo1-app test</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
+    <script src="../async-dom.js"></script>
+    <script src="../../web-component-tester/browser.js"></script>
+  </head>
+  <body>
+
+    <test-fixture id="basic">
+      <template>
+        <div></div>
+      </template>
+    </test-fixture>
+
+    <script>
+      suite('basic', function() {
+
+        test('APIs exist', () => {
+          let e = document.createElement('div');
+          assert.isOk(e.readAsync);
+          assert.isOk(e.writeAsync);
+          assert.isOk(e.waitFor);
+        });
+
+        test('readAsync Promise resolves', () => {
+          var e = document.createElement('div');
+          return e.readAsync();
+        });
+
+        test('writeAsync Promise resolves', () => {
+          let e = document.createElement('div');
+          return e.writeAsync();
+        });
+
+        test('reads before writes', () => {
+          let e = document.createElement('div');
+          let read = false;
+          let writePromise = e.writeAsync().then(() => {
+            assert.isTrue(read);
+          });
+          e.readAsync().then(() => {
+            read = true;
+          });
+          return writePromise;
+        });
+
+        test('batching', () => {
+          let e = document.createElement('div');
+          let calls = '';
+          return Promise.all([
+            e.writeAsync().then(() => calls += 'A'),
+            e.readAsync().then(() => calls += 'B'),
+            e.readAsync().then(() => calls += 'C'),
+            e.writeAsync().then(() => calls += 'D'),
+            e.writeAsync().then(() => calls += 'E'),
+            e.readAsync().then(() => calls += 'F'),
+          ]).then(() => {
+            assert.equal(calls, 'BCFADE');
+          });
+        });
+
+        test('promises queued before waitFor don\'t wait', () => {
+          let e = document.createElement('div');
+          let kicker;
+          let waiter = new Promise((resolve, _) => {
+            kicker = resolve;
+          });
+          e.readAsync().then(kicker);
+          e.waitFor(waiter);
+          return waiter;
+        });
+
+        test('promises queued after waitFor do wait', () => {
+          let e = document.createElement('div');
+          let kicker;
+          let waiter = new Promise((resolve, _) => {
+            kicker = resolve;
+          });
+          let waited = false;
+          e.waitFor(waiter.then(() => {
+            waited = true;
+          }));
+          let readPromise = e.readAsync().then(() => {
+            assert.isTrue(waited);
+          });
+          Promise.resolve().then(() => kicker());
+          return Promise.all([waiter, readPromise]);
+        });
+
+        test('waitFor bubbles', () => {
+          let parent = document.createElement('div');
+          let child = document.createElement('div');
+          parent.appendChild(child);
+          let kicker;
+          let waiter = new Promise((resolve, _) => {
+            kicker = resolve;
+          });
+          let waited = false;
+          child.waitFor(waiter.then(() => {
+            waited = true;
+          }));
+          let readPromise = parent.readAsync().then(() => {
+            assert.isTrue(waited);
+          });
+          Promise.resolve().then(() => kicker());
+          return Promise.all([waiter, readPromise]);
+        });
+
+        test('waitFor doesn\' block child tasks', () => {
+          let parent = document.createElement('div');
+          let child = document.createElement('div');
+          parent.appendChild(child);
+          let kicker;
+          let waiter = new Promise((resolve, _) => {
+            kicker = resolve;
+          });
+          let waited = false;
+          parent.waitFor(waiter.then(() => {
+            waited = true;
+          }));
+          let readPromise = child.readAsync().then(() => {
+            assert.isFalse(waited);
+          });
+          Promise.resolve().then(() => kicker());
+          return Promise.all([waiter, readPromise]);
+        });
+
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "async-dom",
+  "main": "async-dom.js",
+  "authors": [
+    "Justin Fagnani <justinfagnani@google.com>"
+  ],
+  "description": "",
+  "moduleType": [],
+  "license": "BSD",
+  "homepage": "",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "devDependencies": {
+    "web-component-tester": "^4.2.2"
+  }
+}
